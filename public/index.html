@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smart Home 297</title>
+  <style>
+  div.main {
+    text-align:center; border:1px solid blue; border-radius:20px; margin:5%; bottom:100px; outline:100px; outline-offset:10px;
+  }
+  div.main2, div.main3, div.main4, div.main5, div.main6, div.main7 {
+    text-align:center; width:99%; height:52px; border:1px solid green; border-radius:10px; margin-bottom:8px;
+  }
+  div.main2 { background: linear-gradient(to left, green -50%, white 80%); }
+  div.main3 { background: linear-gradient(to left, brown -50%, white 80%); }
+  div.main4 { background: linear-gradient(to left, blue -50%, white 80%); }
+  div.main5 { background: linear-gradient(to left, red -50%, white 80%); }
+  div.main6 { background: linear-gradient(to left, rgb(248,1,195) -50%, white 80%); }
+  div.main7 { background: linear-gradient(to left, rgb(42,1,248) -50%, white 80%); }
+
+  .btn2 {
+    display:inline-block; height:36px; width:23%; min-width:36px; border-radius:30px; background:#04AA6D; border:1px solid #04AA6D;
+    margin:10px 1px; color:#fff; font-weight:bold; cursor:pointer; text-align:center; position:relative;
+  }
+  .btn2:disabled {
+    background:#767474; border:1px solid #767474; color:#000; cursor:default;
+  }
+  .lbl {
+    display:inline-block; height:40px; width:23%; min-width:100px; text-align:right; position:relative;
+  }
+  input[type="text"] {
+    background:#767474; color:#000; border:1px solid #000; margin:25px 15px 3px; border-radius:25px;
+    height:25px; text-align:center; width:15%; min-width:100px;
+  }
+</style>
+
+<script>
+  const pins = [14,26,17,18,19,22,4,23,5,27,33];
+  
+</script>
+
+</head>
+<body>
+  <form onsubmit="return false;">
+    <div class="main">
+      <h2><label style="color:#12590D;">&#128161;&#3619;&#3632;&#3610;&#3610;&#3652;&#3615;&#3615;&#3657;&#3634;&#3649;&#3626;&#3591;&#3626;&#3623;&#3656;&#3634;&#3591;&#128161;</label></h2>
+
+      <div class="main3"><label class="lbl">&#3588;&#3619;&#3633;&#3623;&#9312;</label>
+        <button class="btn2" id="btn-on-5" onclick="toggle(5, true)">On</button>
+        <button class="btn2" id="btn-off-5" onclick="toggle(5, false)">Off</button>
+      </div>
+      <div class="main3"><label class="lbl">&#3588;&#3619;&#3633;&#3623;&#9313;</label>
+        <button class="btn2" id="btn-on-26" onclick="toggle(26, true)">On</button>
+        <button class="btn2" id="btn-off-26" onclick="toggle(26, false)">Off</button>
+      </div>
+      <div class="main3"><label class="lbl">&#3588;&#3619;&#3633;&#3623;&#9314;</label>
+        <button class="btn2" id="btn-on-17" onclick="toggle(17, true)">On</button>
+        <button class="btn2" id="btn-off-17" onclick="toggle(17, false)">Off</button>
+      </div>
+
+      <div class="main6"><label class="lbl">&#3609;&#3629;&#3609;&#3626;&#3610;&#3634;&#3618;</label>
+        <button class="btn2" id="btn-on-19" onclick="toggle(19, true)">On</button>
+        <button class="btn2" id="btn-off-19" onclick="toggle(19, false)">Off</button>
+      </div>
+      <div class="main6"><label class="lbl">&#3627;&#3657;&#3629;&#3591;&#3648;&#3629;&#3655;&#3617;&#3648;&#3607;&#3614;</label>
+        <button class="btn2" id="btn-on-18" onclick="toggle(18, true)">On</button>
+        <button class="btn2" id="btn-off-18" onclick="toggle(18, false)">Off</button>
+      </div>
+      <div class="main6"><label class="lbl">&#3627;&#3657;&#3629;&#3591;&#3609;&#3629;&#3609;&#3651;&#3627;&#3597;&#3656;</label>
+        <button class="btn2" id="btn-on-22" onclick="toggle(22, true)">On</button>
+        <button class="btn2" id="btn-off-22" onclick="toggle(22, false)">Off</button>
+      </div>
+
+      <div class="main5"><label class="lbl">&#3652;&#3615;&#3619;&#3632;&#3618;&#3657;&#3634;&#9312;</label>
+        <button class="btn2" id="btn-on-4" onclick="toggle(4, true)">On</button>
+        <button class="btn2" id="btn-off-4" onclick="toggle(4, false)">Off</button>
+      </div>
+      <div class="main5"><label class="lbl">&#3652;&#3615;&#3619;&#3632;&#3618;&#3657;&#3634;&#9313;</label>
+        <button class="btn2" id="btn-on-23" onclick="toggle(23, true)">On</button>
+        <button class="btn2" id="btn-off-23" onclick="toggle(23, false)">Off</button>
+      </div>
+
+      <div class="main7"><label class="lbl">&#3627;&#3621;&#3633;&#3591;&#3610;&#3657;&#3634;&#3609;</label>
+        <button class="btn2" id="btn-on-14" onclick="toggle(14, true)">On</button>
+        <button class="btn2" id="btn-off-14" onclick="toggle(14, false)">Off</button>
+      </div>
+      <div class="main7"><label class="lbl">&#3586;&#3657;&#3634;&#3591;&#3595;&#3657;&#3634;&#3618;</label>
+        <button class="btn2" id="btn-on-27" onclick="toggle(27, true)">On</button>
+        <button class="btn2" id="btn-off-27" onclick="toggle(27, false)">Off</button>
+      </div>
+      <div class="main7"><label class="lbl">&#3586;&#3657;&#3634;&#3591;&#3586;&#3623;&#3634;</label>
+        <button class="btn2" id="btn-on-33" onclick="toggle(33, true)">On</button>
+        <button class="btn2" id="btn-off-33" onclick="toggle(33, false)">Off</button>
+      </div>
+
+      <div style="text-align:left; margin-top:15px; margin-left:20px;">
+        <a href="/wifi" style="color:#777; font-size:14px; text-decoration:none;">
+          Reset WiFi&#128246;
+        </a>
+      </div>
+    </div>
+  </form>
+</body>
+</html>

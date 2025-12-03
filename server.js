@@ -32,6 +32,6 @@ app.get('/device/:id/control', (req, res) => {
     const { id } = req.params;
     res.json(deviceState[id] || {});
 });
-
+// เริ่มเซิร์ฟเวอร์
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
