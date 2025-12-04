@@ -1,37 +1,144 @@
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+
 const app = express();
 
-app.use(cors());
+/* -------------------- CORS -------------------- */
+const corsOptions = {
+    origin: '*',
+    methods: ['GET','POST'],
+    allowedHeaders: ['Content-Type','Authorization']
+};
+app.use(cors(corsOptions));
+app.use(bodyParser.raw({ type: "application/octet-stream", limit: "1kb" }));
 app.use(bodyParser.json());
 
-const deviceState = {}; // เก็บ state ของ ESP32
+/* -------------------- MongoDB -------------------- */
+mongoose.connect(process.env.MONGO_URI)
+.then(() => console.log("MongoDB Connected"))
+.catch(err => console.log("MongoDB Error", err));
 
-// Middleware ตรวจ API Key
-app.use((req, res, next) => {
-    const key = req.headers['authorization'];
-    if(!key || key !== `Bearer mysecret123`) {
-        return res.status(401).json({ error: 'Unauthorized' });
+/* -------------------- User Schema -------------------- */
+const userSchema = new mongoose.Schema({
+    username: { type: String, unique: true, required: true },
+    password: { type: String, required: true },
+    role: { type: String, enum: ['admin','user'], default: 'user' }
+});
+const User = mongoose.model("User", userSchema, "SmartHomeUsers");
+
+/* -------------------- Smart Home State (bitmask) -------------------- */
+const stateSchema = new mongoose.Schema({
+    _id: { type: String, default: "GLOBAL_STATE" },
+    bitmask: { type: Number, default: 0 }
+});
+const State = mongoose.model("State", stateSchema, "SmartHomeState");
+
+let bitmask = 0;
+
+/* Load state at startup */
+async function loadInitialState() {
+    let doc = await State.findById("GLOBAL_STATE");
+
+    if(!doc) {
+        doc = await State.create({ _id: "GLOBAL_STATE", bitmask: 0 });
+        console.log("Created initial SmartHome state");
     }
-    next();
+
+    bitmask = doc.bitmask;
+    console.log("Loaded bitmask =", bitmask);
+}
+loadInitialState();
+
+/* -------------------- JWT Middleware -------------------- */
+function verifyToken(req, res, next) {
+    const auth = req.headers["authorization"];
+    if(!auth) return res.status(401).json({ error: "Missing token" });
+
+    const token = auth.split(" ")[1];
+    if(!token) return res.status(401).json({ error: "Invalid header" });
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+        if(err) return res.status(403).json({ error: "Invalid token" });
+        req.user = user;
+        next();
+    });
+}
+
+/* -------------------- Login -------------------- */
+app.post('/api/login', async (req, res) => {
+    const { username, password } = req.body;
+
+    // Auto-create admin if missing
+    let admin = await User.findOne({ username: "admin" });
+    if(!admin) {
+        const hashed = await bcrypt.hash("22556677", 10);
+        admin = await User.create({ username: "admin", password: hashed, role: "admin" });
+        console.log("Admin auto-created");
+    }
+
+    const user = await User.findOne({ username });
+    if(!user) return res.status(401).json({ error: "User not found" });
+
+    const match = await bcrypt.compare(password, user.password);
+    if(!match) return res.status(401).json({ error: "Invalid password" });
+
+    const token = jwt.sign(
+        { id: user._id, username: user.username, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: "2h" }
+    );
+
+    res.json({ token });
 });
 
-// POST /device/:id/state
-app.post('/device/:id/state', (req, res) => {
-    const { id } = req.params;
-    const { pin, state } = req.body;
-    if(!deviceState[id]) deviceState[id] = {};
-    deviceState[id][pin] = state;
-    console.log(`Device ${id} Pin ${pin} = ${state}`);
+/* -------------------- Create User (Admin Only) -------------------- */
+app.post("/api/create-user", verifyToken, async (req,res)=>{
+    if(req.user.role !== "admin")
+        return res.status(403).json({ error: "Not allowed" });
+
+    const { username, password } = req.body;
+
+    const hashed = await bcrypt.hash(password, 10);
+    await User.create({ username, password: hashed, role: "user" });
+
+    res.json({ success: true, message: "User created" });
+});
+
+/* -------------------- Set Bitmask (RAW Binary) -------------------- */
+app.post("/api/device/:id/setState", verifyToken, async (req, res) => {
+    const raw = req.body;  // Buffer
+
+    if (!Buffer.isBuffer(raw) || raw.length < 2) {
+        return res.status(400).json({ error: "Must send 2-byte binary" });
+    }
+
+    const newMask = raw.readUInt16BE(0);
+    bitmask = newMask;
+
+    await State.updateOne(
+        { _id: "GLOBAL_STATE" },
+        { $set: { bitmask: bitmask } }
+    );
+
+    console.log("Updated bitmask =", bitmask);
     res.json({ success: true });
 });
 
-// GET /device/:id/control
-app.get('/device/:id/control', (req, res) => {
-    const { id } = req.params;
-    res.json(deviceState[id] || {});
+/* -------------------- Get Bitmask (RAW Binary) -------------------- */
+app.get("/api/device/:id/getState", verifyToken, async (req, res) => {
+    res.setHeader("Content-Type", "application/octet-stream");
+
+    const buf = Buffer.alloc(2);
+    buf.writeUInt16BE(bitmask, 0);
+
+    res.end(buf);
 });
-// เริ่มเซิร์ฟเวอร์
+
+/* -------------------- Start Server -------------------- */
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, ()=>console.log(`Server running on port ${PORT}`));
