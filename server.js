@@ -17,6 +17,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(bodyParser.raw({ type: "application/octet-stream", limit: "1kb" }));
 app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 /* -------------------- MongoDB -------------------- */
 mongoose.connect(process.env.MONGO_URI)
