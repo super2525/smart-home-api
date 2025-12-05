@@ -111,23 +111,30 @@ app.post("/api/create-user", verifyToken, async (req,res)=>{
 
 /* -------------------- Set Bitmask (RAW Binary) -------------------- */
 app.post("/api/device/:id/setState", verifyToken, async (req, res) => {
-    const raw = req.body;  // Buffer
+    
+    try {
+        const raw = req.body;
 
-    if (!Buffer.isBuffer(raw) || raw.length < 2) {
-        return res.status(400).json({ error: "Must send 2-byte binary" });
+        if (!Buffer.isBuffer(raw) || raw.length < 2) {
+            return res.status(400).json({ error: "Must send 2-byte binary" });
+        }
+
+        const newMask = raw.readUInt16BE(0);
+        bitmask = newMask;
+
+        await State.updateOne(
+            { _id: "GLOBAL_STATE" },
+            { $set: { bitmask: bitmask } },
+            { upsert: true }
+        );
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Error updating bitmask:", err);
+        res.status(500).json({ error: "Server error"+err.message });
     }
-
-    const newMask = raw.readUInt16BE(0);
-    bitmask = newMask;
-
-    await State.updateOne(
-        { _id: "GLOBAL_STATE" },
-        { $set: { bitmask: bitmask } }
-    );
-
-    console.log("Updated bitmask =", bitmask);
-    res.json({ success: true });
 });
+
 
 /* -------------------- Get Bitmask (RAW Binary) -------------------- */
 app.get("/api/device/:id/getState", verifyToken, async (req, res) => {
