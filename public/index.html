@@ -35,7 +35,7 @@
         <h2>🏡 ควบคุมไฟบ้าน</h2>
         <div id="controls">Loading...</div>
         <div style="text-align:center; margin-top:20px;">
-            <button onclick="logout()" style="background:#f44336; color:white; border:none; padding:8px 16px; border-radius:5px; cursor:pointer;">เข้าสู่ระบบ</button>
+            <button id = "btnLogout" onclick="logout()" style="background:#f44336; color:white; border:none; padding:8px 16px; border-radius:5px; cursor:pointer;">เริ่มใช้งาน</button>
         </div>
     </div>
 
@@ -75,6 +75,7 @@
                     token = res.token;
                     document.getElementById("loginModal").style.display = "none";
                     loadState();
+                    document.getElementById("btnLogout").innerText = "ออกจากระบบ";
                 } else {
                     alert("Login failed: " + (res.error || "Unknown"));
                 }
