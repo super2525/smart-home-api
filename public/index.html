@@ -75,7 +75,7 @@
                     token = res.token;
                     document.getElementById("loginModal").style.display = "none";
                     loadState();
-                    document.getElementById("btnLogout").innerText = "ออกจากระบบ";
+                    
                 } else {
                     alert("Login failed: " + (res.error || "Unknown"));
                 }
@@ -101,6 +101,7 @@
                         <button class="btn ${isOn ? 'on' : 'off'}" onclick="togglePin(${index}, false)">ปิด</button>
                     </div>`;
             });
+            document.getElementById("btnLogout").innerText = "ออกจากระบบ";
         }
 
         async function loadState() {
