@@ -40,21 +40,6 @@ const stateSchema = new mongoose.Schema({
 });
 const State = mongoose.model("State", stateSchema, "SmartHomeState");
 
-let bitmask = 0;
-
-/* Load state at startup */
-async function loadInitialState() {
-    let doc = await State.findById("GLOBAL_STATE");
-
-    if(!doc) {
-        doc = await State.create({ _id: "GLOBAL_STATE", bitmask: 0 });
-        console.log("Created initial SmartHome state");
-    }
-
-    bitmask = doc.bitmask;
-    console.log("Loaded bitmask =", bitmask);
-}
-loadInitialState();
 
 /* -------------------- JWT Middleware -------------------- */
 function verifyToken(req, res, next) {
@@ -112,40 +97,52 @@ app.post("/api/create-user", verifyToken, async (req,res)=>{
 });
 
 /* -------------------- Set Bitmask (RAW Binary) -------------------- */
+/* -------------------- Set Bitmask -------------------- */
 app.post("/api/device/:id/setState", verifyToken, async (req, res) => {
-    
     try {
+        const deviceID = req.params.id;
         const raw = req.body;
 
         if (!Buffer.isBuffer(raw) || raw.length < 2) {
+            console.log("[setState] Error: Invalid Body (Not 2-byte Buffer)"); // <--- Log Error
             return res.status(400).json({ error: "Must send 2-byte binary" });
         }
 
         const newMask = raw.readUInt16BE(0);
-        bitmask = newMask;
 
-        await State.updateOne(
-            { _id: "GLOBAL_STATE" },
-            { $set: { bitmask: bitmask } },
+        const result = await State.updateOne(
+            { _id: deviceID },
+            { $set: { bitmask: newMask } },
             { upsert: true }
         );
-
+        
         res.json({ success: true });
     } catch (err) {
-        console.error("Error updating bitmask:", err);
-        res.status(500).json({ error: "Server error"+err.message });
+        console.error("[setState] Server Error:", err);
+        res.status(500).json({ error: err.message });
     }
 });
 
-
 /* -------------------- Get Bitmask (RAW Binary) -------------------- */
 app.get("/api/device/:id/getState", verifyToken, async (req, res) => {
-    res.setHeader("Content-Type", "application/octet-stream");
+    try {
 
-    const buf = Buffer.alloc(2);
-    buf.writeUInt16BE(bitmask, 0);
+        let state = await State.findById(req.params.id);
+        if (!state) {
+            //upsert default state
+            state = await State.create({ _id: req.params.id, bitmask: 0 });
+            console.log(`New device registered: ${req.params.id}`);
+        } 
 
-    res.end(buf);
+        res.setHeader("Content-Type", "application/octet-stream");
+        const buf = Buffer.alloc(2);
+        buf.writeUInt16BE(state.bitmask, 0);
+
+        res.end(buf);
+    } catch (err) {
+        console.error("Error fetching bitmask:", err.message);
+        res.status(500).json({ error: "Server error"+err.message });
+    }
 });
 
 /* -------------------- Start Server -------------------- */

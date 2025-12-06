@@ -1,144 +1,136 @@
 <!DOCTYPE html>
 <html lang="th">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- เพิ่มบรรทัดนี้เพื่อให้สวยบนมือถือ -->
-    <title>ระบบไฟบ้านผ่านเน็ต</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบไฟฟ้าบ้านผ่านเน็ต</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f3f3f3;
-            margin: 0;
-            padding: 20px;
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+        
+        #container { 
+            width: 100%; 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); 
         }
 
-        #container {
-            width: 90%;
-            max-width: 500px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
+        h2 { text-align: center; color: #2c3e50; margin-bottom: 20px; }
+        h3 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; color: #555; font-size: 1.1em; }
+        
+        .row { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 12px 0; 
+            border-bottom: 1px solid #f0f0f0; 
+        }
+        
+        .label { 
+            flex-grow: 1; 
+            font-size: 16px; 
+            font-weight: 500;
         }
 
-        h2 {
-            text-align: center;
+        .btn { 
+            padding: 8px 16px; 
+            border: none; 
+            border-radius: 20px; 
+            color: white; 
+            cursor: pointer; 
+            font-size: 14px; 
+            margin-left: 8px; 
+            min-width: 60px;
+            transition: all 0.2s;
+            width:25%;
         }
 
-        .row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .label {
-            width: 50%;
-            font-size: 16px;
-        }
-
-        .btn {
-            padding: 8px 10px;
-            border: none;
-            border-radius: 6px;
-            color: white;
-            cursor: pointer;
-            font-size: 14px;
-            margin-left: 5px;
-            width: 22%;
-        }
-
-        .on {
-            background: #4CAF50;
-        }
-
-        .off {
-            background: #888888;
-        }
+        .on { background: #4CAF50; box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3); }
+        .on:hover { background: #45a049; }
+        
+        .off { background: #9e9e9e; }
+        .off:hover { background: #757575; }
 
         /* Login Modal */
-        #loginModal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            display: none;
-            justify-content: center;
-            align-items: center;
+        #loginModal { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px);
+            display: none; justify-content: center; align-items: center; z-index: 1000;
         }
 
-        #loginBox {
-            background: white;
-            padding: 20px;
-            width: 300px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-            text-align: center;
+        #loginBox { 
+            background: white; padding: 30px; width: 90%; max-width: 320px; 
+            border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center; 
         }
 
-        #loginBox input {
-            width: 90%;
-            padding: 10px;
-            margin-top: 10px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-            font-size: 16px;
+        #loginBox input { 
+            width: 100%; padding: 12px; margin-top: 10px; box-sizing: border-box;
+            border-radius: 8px; border: 1px solid #ddd; font-size: 16px; 
         }
 
-        #loginBox button {
-            width: 96%;
-            padding: 10px;
-            margin-top: 15px;
-            border: none;
-            border-radius: 6px;
-            background: #4CAF50;
-            color: white;
-            font-size: 16px;
-            cursor: pointer;
+        #loginBox button { 
+            width: 100%; padding: 12px; margin-top: 20px; 
+            border: none; border-radius: 8px; background: #2196F3; 
+            color: white; font-size: 16px; cursor: pointer; font-weight: bold;
         }
+
+        #btnLogout {
+            background: #ff5252; color: white; border: none; 
+            padding: 10px 20px; border-radius: 8px; cursor: pointer; 
+            font-size: 14px; margin-top: 20px; transition: background 0.3s;
+        }
+        #btnLogout:hover { background: #d32f2f; }
+
     </style>
 </head>
-
 <body>
 
+    <!-- หน้าต่าง Login -->
     <div id="loginModal">
         <div id="loginBox">
-            <h3>Login Smart Home</h3>
-            <input type="text" id="username" placeholder="Username">
-            <input type="password" id="password" placeholder="Password">
-            <button onclick="login()">เข้าสู่ระบบ</button>
+            <h3>🔐 เข้าสู่ระบบ</h3>
+            <input type="text" id="username" placeholder="ชื่อผู้ใช้">
+            <input type="password" id="password" placeholder="รหัสผ่าน">
+            <button onclick="login()">Login</button>
         </div>
     </div>
 
+    <!-- คอนเทนต์หลัก -->
     <div id="container">
-        <h2>🏡 ควบคุมไฟบ้าน</h2>
-        <div id="controls">Loading...</div>
-        <div style="text-align:center; margin-top:20px;">
-            <button id="btnLogout" onclick="logout()"
-                style="background:#f44336; color:white; border:none; padding:8px 16px; border-radius:5px; cursor:pointer;">เริ่มใช้งาน</button>
+        <h2>🏠 Smart Home Control</h2>
+        
+        <!-- ส่วนควบคุม ESP32 (ในบ้าน) -->
+        <!-- <h3>ภายในบ้าน (ESP32)</h3> -->
+        <div id="controls-esp32" style="text-align:center; color:#888;">กำลังโหลด...</div>
+
+        <!-- ส่วนควบคุม ESP8266 (นอกบ้าน) -->
+        <!-- <h3>โรงรถ & หน้าบ้าน (ESP8266)</h3> -->
+        <div id="controls-esp8266" style="text-align:center; color:#888;">กำลังโหลด...</div>
+
+        <div style="text-align:center;">
+            <button id="btnLogout" onclick="logout()">ออกจากระบบ</button>
         </div>
     </div>
 
     <script>
-        const pinLabels = [
-            "ครัว 1", "ครัว 2", "ครัว 3",
-            "ห้องอาร์มมี่", "ห้องเอ็มเทพ", "ห้องพ่อแม่",
-            "ไฟระย้า 1", "ไฟระย้า 2", "หลังบ้าน",
-            "ไฟแสงสี", "ข้างขวา"
-        ];
-        const pins = [5, 26, 17, 18, 19, 22, 4, 23, 14, 27, 33];
-        const deviceID = "esp32-01";
-        let bitmask = 0;
+        const API_URL = "http://127.0.0.1:3000/api";
         let token = localStorage.getItem("token");
 
-        // --- URL เปลี่ยนเป็น Relative Path ---
-        // ไม่ต้องใส่ http://... แล้ว มันจะอ้างอิงจากเว็บตัวเองอัตโนมัติ
-        const API_URL = "/api";
+        // Config อุปกรณ์
+        const devices = {
+            "esp32-01": {
+                containerId: "controls-esp32",
+                labels: ["ครัว 1", "ครัว 2", "ครัว 3", "ห้องอาร์มี่", "ห้องเอ็มเทพ", "ห้องพ่อแม่", "ไฟระย้า 1", "ไฟระย้า 2", "หลังบ้าน", "ไฟแสงสี", "ข้างขวา"],
+                state: 0 // เก็บ bitmask ล่าสุด
+            },
+            "esp8266-01": {
+                containerId: "controls-esp8266",
+                labels: ["ประตูโรงรถ", "ไฟหน้าบ้าน"], // Index 0=D6, Index 1=D5
+                state: 0
+            }
+        };
 
         function showLogin() {
             document.getElementById("loginModal").style.display = "flex";
@@ -148,24 +140,28 @@
             const username = document.getElementById("username").value.trim();
             const password = document.getElementById("password").value.trim();
 
-            fetch(`${API_URL}/login`, { // <--- แก้ตรงนี้
+            fetch(`${API_URL}/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ username, password })
             })
-                .then(r => r.json())
-                .then(res => {
-                    if (res.token) {
-                        localStorage.setItem("token", res.token);
-                        token = res.token;
-                        document.getElementById("loginModal").style.display = "none";
-                        loadState();
-
-                    } else {
-                        alert("Login failed: " + (res.error || "Unknown"));
-                    }
-                })
-                .catch(err => alert("Connection Error"));
+            .then(r => r.json())
+            .then(res => {
+                if (res.token) {
+                    localStorage.setItem("token", res.token);
+                    token = res.token;
+                    document.getElementById("loginModal").style.display = "none";
+                    
+                    // *** แก้ตรงนี้: เรียก loadAll() แทน loadState() เฉยๆ ***
+                    loadAll(); 
+                } else {
+                    alert("Login failed: " + (res.error || "Unknown"));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Connection Error");
+            });
         }
 
         function logout() {
@@ -174,24 +170,30 @@
         }
 
         function buildUI() {
-            const area = document.getElementById("controls");
-            area.innerHTML = "";
-            pins.forEach((pin, index) => {
-                const mask = 1 << index;
-                const isOn = (bitmask & mask) !== 0;
-                area.innerHTML += `
+            for (const [devId, config] of Object.entries(devices)) {
+                const area = document.getElementById(config.containerId);
+                // ถ้าหา element ไม่เจอ (เช่นแก้ชื่อ id ผิด) ให้ข้ามไป
+                if (!area) continue; 
+                
+                area.innerHTML = "";
+                
+                config.labels.forEach((label, index) => {
+                    const mask = 1 << index;
+                    const isOn = (config.state & mask) !== 0;
+
+                    area.innerHTML += `
                     <div class="row">
-                        <div class="label">${pinLabels[index]}</div>
-                        <button class="btn ${!isOn ? 'on' : 'off'}" onclick="togglePin(${index}, true)">เปิด</button>
-                        <button class="btn ${isOn ? 'on' : 'off'}" onclick="togglePin(${index}, false)">ปิด</button>
+                        <div class="label">${label}</div>
+                        <button class="btn ${!isOn ? 'on' : 'off'}" onclick="togglePin('${devId}', ${index}, true)">เปิด</button>
+                        <button class="btn ${isOn ? 'on' : 'off'}" onclick="togglePin('${devId}', ${index}, false)">ปิด</button>
                     </div>`;
-            });
-            document.getElementById("btnLogout").innerText = "ออกจากระบบ";
+                });
+            }
         }
 
-        async function loadState() {
+        async function loadState(devId) {
             try {
-                const r = await fetch(`${API_URL}/device/${deviceID}/getState`, { // <--- แก้ตรงนี้
+                const r = await fetch(`${API_URL}/device/${devId}/getState`, {
                     headers: { "authorization": "Bearer " + token }
                 });
 
@@ -201,27 +203,41 @@
                 }
                 const buf = new Uint8Array(await r.arrayBuffer());
                 if (buf.length === 2) {
-                    bitmask = (buf[0] << 8) | buf[1];
-                    buildUI();
+                    // แปลง Buffer เป็น Integer และอัปเดต state ใน config
+                    devices[devId].state = (buf[0] << 8) | buf[1];
                 }
             } catch (e) {
-                console.error(e);
+                console.error(`Error loading ${devId}:`, e);
             }
         }
 
-        async function togglePin(index, turnOn) {
+        async function loadAll() {
+            // วนลูปโหลดทุก Device ที่มีใน config
+            for (const devId of Object.keys(devices)) {
+                await loadState(devId);
+            }
+            // โหลดข้อมูลครบแล้วค่อยสร้างปุ่มทีเดียว
+            buildUI();
+        }
+
+        async function togglePin(devId, index, turnOn) {
+            let currentMask = devices[devId].state;
             const mask = 1 << index;
-            if (turnOn) bitmask |= mask; else bitmask &= ~mask;
 
-            const buf = new Uint8Array(2);
-            buf[0] = (bitmask >> 8) & 0xFF;
-            buf[1] = bitmask & 0xFF;
+            if (turnOn) currentMask |= mask; 
+            else currentMask &= ~mask;
 
-            // Update UI ทันทีเพื่อให้รู้ว่ากดแล้ว
+            // อัปเดต UI ทันที (Optimistic UI)
+            devices[devId].state = currentMask;
             buildUI();
 
+            // เตรียมข้อมูล Binary ส่ง Server
+            const buf = new Uint8Array(2);
+            buf[0] = (currentMask >> 8) & 0xFF;
+            buf[1] = currentMask & 0xFF;
+
             try {
-                await fetch(`${API_URL}/device/${deviceID}/setState`, { // <--- แก้ตรงนี้
+                await fetch(`${API_URL}/device/${devId}/setState`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/octet-stream",
@@ -231,16 +247,26 @@
                 });
             } catch (err) {
                 console.error("Fetch error:", err);
-                alert("สั่งงานไม่สำเร็จ เช็คเน็ตด้วยครับ");
+                alert("สั่งงานไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ต");
+                // ถ้า error อาจจะโหลด state เก่ากลับมาแสดง (Optional)
+                loadAll();
             }
         }
 
         window.onload = () => {
-            if (!token) showLogin(); else loadState();
-            // Auto Refresh หน้าเว็บทุก 5 วินาที เพื่อดูสถานะจริง (เผื่อคนอื่นกดเปิดไฟ)
-            setInterval(() => { if (token) loadState(); }, 5000);
+            if (!token) {
+                showLogin();
+            } else {
+                loadAll();
+            }
+            
+            // Auto Refresh ทุก 3 วินาที เพื่อดึงสถานะจริง
+            setInterval(() => { 
+                if(token && document.getElementById("loginModal").style.display === "none") {
+                    loadAll(); 
+                }
+            }, 3000);
         };
     </script>
 </body>
-
 </html>
