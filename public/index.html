@@ -5,7 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบไฟฟ้าบ้านผ่านเน็ต</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+        /* --- แก้ปัญหา UI เอียง/ล้นจอ --- */
+        * { box-sizing: border-box; } 
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f0f2f5; 
+            margin: 0; 
+            padding: 20px; 
+            color: #333; 
+        }
         
         #container { 
             width: 100%; 
@@ -17,8 +26,8 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); 
         }
 
-        h2 { text-align: center; color: #2c3e50; margin-bottom: 20px; }
-        h3 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; color: #555; font-size: 1.1em; }
+        h2 { text-align: center; color: #2c3e50; margin-bottom: 20px; margin-top: 0; }
+        h3 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; color: #555; font-size: 1.1em; text-align: center; }
         
         .row { 
             display: flex; 
@@ -32,19 +41,20 @@
             flex-grow: 1; 
             font-size: 16px; 
             font-weight: 500;
+            padding-right: 10px; 
         }
 
         .btn { 
-            padding: 8px 16px; 
+            padding: 8px 12px; 
             border: none; 
             border-radius: 20px; 
             color: white; 
             cursor: pointer; 
             font-size: 14px; 
-            margin-left: 8px; 
+            margin-left: 5px; 
             min-width: 60px;
             transition: all 0.2s;
-            width:25%;
+            flex-shrink: 0; 
         }
 
         .on { background: #4CAF50; box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3); }
@@ -66,7 +76,7 @@
         }
 
         #loginBox input { 
-            width: 100%; padding: 12px; margin-top: 10px; box-sizing: border-box;
+            width: 100%; padding: 12px; margin-top: 10px; 
             border-radius: 8px; border: 1px solid #ddd; font-size: 16px; 
         }
 
@@ -76,23 +86,46 @@
             color: white; font-size: 16px; cursor: pointer; font-weight: bold;
         }
 
-        #btnLogout {
-            background: #ff5252; color: white; border: none; 
-            padding: 10px 20px; border-radius: 8px; cursor: pointer; 
-            font-size: 14px; margin-top: 20px; transition: background 0.3s;
+        /* Menu Area (ส่วนปุ่มด้านล่าง) */
+        .menu-area {
+            text-align: center; 
+            margin-top: 30px; 
+            display: flex; 
+            justify-content: center; 
+            gap: 15px; 
         }
-        #btnLogout:hover { background: #d32f2f; }
+
+        .btn-menu {
+            text-decoration: none; 
+            padding: 10px 20px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 14px; 
+            transition: background 0.3s;
+            border: none;
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-schedule { background: #2196F3; }
+        .btn-schedule:hover { background: #1976D2; }
+
+        .btn-logout { background: #ff5252; }
+        .btn-logout:hover { background: #d32f2f; }
 
     </style>
 </head>
 <body>
+
     <!-- หน้าต่าง Login -->
     <div id="loginModal">
         <div id="loginBox">
             <h3>🔐 เข้าสู่ระบบ</h3>
             <input type="text" id="username" placeholder="ชื่อผู้ใช้">
             <input type="password" id="password" placeholder="รหัสผ่าน">
-            <button onclick="login()">Login</button>
+            <button onclick="login()">เข้าสู่ระบบ</button>
         </div>
     </div>
 
@@ -101,15 +134,15 @@
         <h2>🏠 Smart Home Control</h2>
         
         <!-- ส่วนควบคุม ESP32 (ในบ้าน) -->
-        <!-- <h3>ภายในบ้าน (ESP32)</h3> -->
         <div id="controls-esp32" style="text-align:center; color:#888;">กำลังโหลด...</div>
 
-        <!-- ส่วนควบคุม ESP8266 (นอกบ้าน) -->
-        <!-- <h3>โรงรถ & หน้าบ้าน (ESP8266)</h3> -->
-        <div id="controls-esp8266" style="text-align:center; color:#888;">กำลังโหลด...</div>
+        <!-- ส่วนควบคุม ESP8266 (ถ้ามี) -->
+        <div id="controls-esp8266"></div>
 
-        <div style="text-align:center;">
-            <button id="btnLogout" onclick="logout()">ออกจากระบบ</button>
+        <!-- เมนู (ปุ่มตั้งเวลา + Logout) -->
+        <div class="menu-area">
+            <a href="/schedule.html" class="btn-menu btn-schedule">⏰ ตั้งเวลา</a>
+            <button id="btnLogout" class="btn-menu btn-logout" onclick="logout()">ออกจากระบบ</button>
         </div>
     </div>
 
@@ -121,12 +154,12 @@
         const devices = {
             "esp32-01": {
                 containerId: "controls-esp32",
-                labels: ["ครัว 1", "ครัว 2", "ครัว 3", "ห้องอาร์มี่", "ห้องเอ็มเทพ", "ห้องพ่อแม่", "ไฟระย้า 1", "ไฟระย้า 2", "หลังบ้าน", "ไฟแสงสี", "ข้างขวา"],
-                state: 0 // เก็บ bitmask ล่าสุด
+                labels: ["ครัว 1", "ครัว 2", "ครัว 3", "ห้องอาร์มี่", "ห้องเอ็มเทพ", "ห้องพ่อแม่", "ไฟระย้า 1", "ไฟระย้า 2", "หลังบ้าน", "ไฟแสงสี (Alarm)", "ข้างขวา"],
+                state: 0 
             },
             "esp8266-01": {
                 containerId: "controls-esp8266",
-                labels: ["ประตูโรงรถ", "ไฟหน้าบ้าน"], // Index 0=D6, Index 1=D5
+                labels: ["ประตูโรงรถ", "ไฟหน้าบ้าน"], 
                 state: 0
             }
         };
@@ -149,33 +182,44 @@
                 if (res.token) {
                     localStorage.setItem("token", res.token);
                     token = res.token;
+
+                    // --- เพิ่มใหม่: แกะ Role จาก Token ---
+                    try {
+                        const payload = JSON.parse(atob(res.token.split('.')[1]));
+                        localStorage.setItem("role", payload.role);
+                    } catch (e) { console.error(e); }
+                    // ----------------------------------
+
                     document.getElementById("loginModal").style.display = "none";
-                    
-                    // *** แก้ตรงนี้: เรียก loadAll() แทน loadState() เฉยๆ ***
                     loadAll(); 
                 } else {
-                    alert("Login failed: " + (res.error || "Unknown"));
+                    alert("เข้าสู่ระบบไม่สำเร็จ: " + (res.error || "Unknown"));
                 }
             })
             .catch(err => {
                 console.error(err);
-                alert("Connection Error");
+                alert("เชื่อมต่อ Server ไม่ได้");
             });
         }
 
         function logout() {
             localStorage.removeItem("token");
+            localStorage.removeItem("role"); // ลบ Role ออกด้วย
             location.reload();
         }
 
         function buildUI() {
             for (const [devId, config] of Object.entries(devices)) {
                 const area = document.getElementById(config.containerId);
-                // ถ้าหา element ไม่เจอ (เช่นแก้ชื่อ id ผิด) ให้ข้ามไป
+                // ถ้าหา element ไม่เจอ (เช่น config มีแต่ html ไม่มี) ให้ข้าม
                 if (!area) continue; 
                 
                 area.innerHTML = "";
                 
+                // ใส่หัวข้ออุปกรณ์ (ถ้าต้องการ)
+                if(devId === "esp8266-01") area.innerHTML += `<h3>โรงรถ & หน้าบ้าน</h3>`;
+                else if(devId === "esp32-01") area.innerHTML += `<h3>ภายในบ้าน</h3>`;
+
                 config.labels.forEach((label, index) => {
                     const mask = 1 << index;
                     const isOn = (config.state & mask) !== 0;
@@ -202,7 +246,6 @@
                 }
                 const buf = new Uint8Array(await r.arrayBuffer());
                 if (buf.length === 2) {
-                    // แปลง Buffer เป็น Integer และอัปเดต state ใน config
                     devices[devId].state = (buf[0] << 8) | buf[1];
                 }
             } catch (e) {
@@ -211,11 +254,9 @@
         }
 
         async function loadAll() {
-            // วนลูปโหลดทุก Device ที่มีใน config
             for (const devId of Object.keys(devices)) {
                 await loadState(devId);
             }
-            // โหลดข้อมูลครบแล้วค่อยสร้างปุ่มทีเดียว
             buildUI();
         }
 
@@ -226,11 +267,10 @@
             if (turnOn) currentMask |= mask; 
             else currentMask &= ~mask;
 
-            // อัปเดต UI ทันที (Optimistic UI)
+            // UI Optimistic Update
             devices[devId].state = currentMask;
             buildUI();
 
-            // เตรียมข้อมูล Binary ส่ง Server
             const buf = new Uint8Array(2);
             buf[0] = (currentMask >> 8) & 0xFF;
             buf[1] = currentMask & 0xFF;
@@ -246,11 +286,10 @@
                 });
             } catch (err) {
                 console.error("Fetch error:", err);
-                alert("สั่งงานไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ต");
-                // ถ้า error อาจจะโหลด state เก่ากลับมาแสดง (Optional)
+                alert("สั่งงานไม่สำเร็จ");
                 loadAll();
             }
-        } 
+        }
 
         window.onload = () => {
             if (!token) {
@@ -259,7 +298,6 @@
                 loadAll();
             }
             
-            // Auto Refresh ทุก 3 วินาที เพื่อดึงสถานะจริง
             setInterval(() => { 
                 if(token && document.getElementById("loginModal").style.display === "none") {
                     loadAll(); 
