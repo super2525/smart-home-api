@@ -89,7 +89,6 @@ app.post("/api/create-user", verifyToken, async (req,res)=>{
         return res.status(403).json({ error: "Not allowed" });
 
     const { username, password } = req.body;
-
     const hashed = await bcrypt.hash(password, 10);
     await User.create({ username, password: hashed, role: "user" });
 
