@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตั้งเวลาเปิด-ปิดไฟ</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-top: 0;
+            color: #444;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        select,
+        input {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            flex-grow: 1;
+            font-size: 16px;
+            background: #fff;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            transition: 0.2s;
+        }
+
+        .btn-add {
+            background: #4CAF50;
+            width: 100%;
+        }
+
+        .btn-add:hover {
+            background: #45a049;
+        }
+
+        .btn-add:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-back {
+            background: #607d8b;
+            display: inline-block;
+            text-decoration: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            color: white;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .btn-back:hover {
+            background: #546e7a;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+            border-bottom: 1px solid #eee;
+            padding: 15px 0;
+        }
+
+        .time-badge {
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            margin-right: 10px;
+            font-size: 1.1em;
+        }
+
+        .device-badge {
+            background: #eee;
+            color: #555;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-right: 5px;
+        }
+
+        .action-on {
+            color: #2e7d32;
+            font-weight: bold;
+        }
+
+        .action-off {
+            color: #c62828;
+            font-weight: bold;
+        }
+
+        .meta-info {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .btn-del {
+            background: #ff5252;
+            padding: 6px 12px;
+            font-size: 13px;
+            margin-left: 10px;
+            border-radius: 6px;
+        }
+
+        .btn-del:hover {
+            background: #ff1744;
+        }
+
+        #loading {
+            text-align: center;
+            color: #666;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <a href="/" class="btn-back">← กลับหน้าควบคุม</a>
+        <h2>⏰ ตั้งเวลาอัตโนมัติ</h2>
+
+        <!-- ส่วนควบคุม (จะถูกซ่อนถ้าไม่ใช่ Admin) -->
+        <div id="adminPanel">
+            <div class="control-group">
+                <select id="deviceSelect" onchange="updatePinList()">
+                    <!-- รายชื่ออุปกรณ์จะถูกเติมด้วย JS -->
+                </select>
+                <select id="pinSelect">
+                    <!-- รายชื่อขาจะเปลี่ยนตามอุปกรณ์ -->
+                </select>
+            </div>
+            <div class="control-group">
+                <select id="actionSelect">
+                    <option value="ON">สั่งเปิด (ON)</option>
+                    <option value="OFF">สั่งปิด (OFF)</option>
+                </select>
+                <input type="time" id="timeInput" required>
+            </div>
+            <button id="btnAdd" class="btn-add" onclick="addSchedule()">บันทึกเวลา</button>
+        </div>
+
+        <hr style="margin: 25px 0; border: 0; border-top: 1px solid #eee;">
+
+        <div id="loading">กำลังโหลดข้อมูล...</div>
+        <div id="scheduleList"></div>
+    </div>
+
+    <script>
+        // --- Config: กำหนดชื่ออุปกรณ์และรายชื่อไฟ ---
+        const deviceConfig = {
+            "esp32-01": [
+                "ครัว 1", "ครัว 2", "ครัว 3",
+                "ห้องอาร์มมี่", "ห้องเอื้อมเทพ", "ห้องพ่อแม่",
+                "ไฟระย้า 1", "ไฟระย้า 2", "หลังบ้าน",
+                "ไฟแสงสี (Alarm)", "ข้างขวา"
+            ],
+            "esp8266-01": [
+                "ประตูโรงรถ", "ไฟหน้าบ้าน"
+            ]
+        };
+
+        const API_URL = "/api";
+        const token = localStorage.getItem("token");
+        const userRole = localStorage.getItem("role");
+
+        // 1. Init: สร้าง Dropdown เลือกอุปกรณ์
+        const devSel = document.getElementById("deviceSelect");
+        for (const devId of Object.keys(deviceConfig)) {
+            let opt = document.createElement("option");
+            opt.value = devId;
+            opt.innerText = devId.toUpperCase();
+            devSel.appendChild(opt);
+        }
+
+        // 2. Function: อัปเดตรายชื่อ Pin ตามอุปกรณ์ที่เลือก
+        function updatePinList() {
+            const selectedDev = document.getElementById("deviceSelect").value;
+            const pinSel = document.getElementById("pinSelect");
+            pinSel.innerHTML = ""; // ล้างค่าเก่า
+
+            const labels = deviceConfig[selectedDev];
+            if (labels) {
+                labels.forEach((label, idx) => {
+                    let opt = document.createElement("option");
+                    opt.value = idx;
+                    opt.innerText = label;
+                    pinSel.appendChild(opt);
+                });
+            }
+        }
+
+        // 3. Init Page
+        window.onload = () => {
+            if (!token) {
+                alert("กรุณา Login ก่อนใช้งาน");
+                window.location.href = "/";
+                return;
+            }
+
+            // ถ้าไม่ใช่ Admin ให้ซ่อนแผงควบคุม
+            if (userRole !== 'admin') {
+                const adminPanel = document.getElementById("adminPanel");
+                if (adminPanel) adminPanel.style.display = "none";
+            }
+
+            // เรียก updatePinList ครั้งแรกเพื่อเติมค่าเริ่มต้น
+            updatePinList();
+
+            // โหลดข้อมูล
+            loadData();
+        };
+
+        // 4. โหลดข้อมูล
+        async function loadData() {
+            try {
+                const res = await fetch(`${API_URL}/schedule`, {
+                    headers: { "Authorization": "Bearer " + token }
+                });
+                const list = await res.json();
+
+                const div = document.getElementById("scheduleList");
+                document.getElementById("loading").style.display = "none";
+                div.innerHTML = "";
+
+                if (list.length === 0) {
+                    div.innerHTML = "<p style='text-align:center; color:#999;'>ยังไม่มีการตั้งเวลา</p>";
+                    return;
+                }
+
+                list.forEach(item => {
+                    // หาชื่อไฟจาก Config
+                    const devName = item.deviceID;
+                    const pins = deviceConfig[devName];
+                    const pinName = (pins && pins[item.pinIndex]) ? pins[item.pinIndex] : `Pin ${item.pinIndex}`;
+
+                    const actionHtml = item.action === 'ON'
+                        ? `<span class="action-on">เปิดไฟ</span>`
+                        : `<span class="action-off">ปิดไฟ</span>`;
+
+                    // แปลง Timestamp
+                    let dateStr = "-";
+                    if (item.createdAt) {
+                        dateStr = new Date(item.createdAt).toLocaleString('th-TH', {
+                            day: '2-digit', month: '2-digit', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+                    }
+
+                    const creator = item.createdBy ? item.createdBy : "System";
+
+                    // ปุ่มลบ (Admin Only)
+                    let deleteBtn = "";
+                    if (userRole === 'admin') {
+                        deleteBtn = `<button class="btn-del" onclick="delSchedule('${item._id}')">ลบ</button>`;
+                    }
+
+                    div.innerHTML += `
+                        <div class="list-item">
+                            <div>
+                                <span class="time-badge">${item.time} น.</span>
+                                <span class="device-badge">${devName}</span>
+                                ${actionHtml} : <strong>${pinName}</strong>
+                                <div class="meta-info">
+                                    โดย: ${creator} | บันทึกเมื่อ: ${dateStr}
+                                </div>
+                            </div>
+                            ${deleteBtn}
+                        </div>
+                    `;
+                });
+            } catch (e) {
+                console.error(e);
+                alert("โหลดข้อมูลล้มเหลว");
+            }
+        }
+
+        // 5. เพิ่มเวลา
+        async function addSchedule() {
+            const deviceID = document.getElementById("deviceSelect").value;
+            const pinIndex = document.getElementById("pinSelect").value;
+            const action = document.getElementById("actionSelect").value;
+            const time = document.getElementById("timeInput").value;
+
+            if (!time) return alert("กรุณาเลือกเวลา");
+
+            const btn = document.getElementById("btnAdd");
+            btn.disabled = true;
+            btn.innerText = "กำลังบันทึก...";
+
+            try {
+                const res = await fetch(`${API_URL}/schedule`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+                    body: JSON.stringify({
+                        deviceID: deviceID,
+                        pinIndex: pinIndex,
+                        action: action,
+                        time: time
+                    })
+                });
+
+                if (res.ok) {
+                    loadData();
+                } else {
+                    const err = await res.json();
+                    alert("บันทึกไม่สำเร็จ: " + (err.error || "Unknown Error"));
+                }
+            } catch (e) {
+                alert("Connection Error");
+            }
+
+            btn.disabled = false;
+            btn.innerText = "บันทึกเวลา";
+        }
+
+        // 6. ลบเวลา
+        async function delSchedule(id) {
+            if (!confirm("ยืนยันการลบรายการนี้?")) return;
+
+            try {
+                const res = await fetch(`${API_URL}/schedule/${id}`, {
+                    method: "DELETE",
+                    headers: { "Authorization": "Bearer " + token }
+                });
+                if (res.ok) {
+                    loadData();
+                } else {
+                    alert("ลบไม่สำเร็จ");
+                }
+            } catch (e) {
+                alert("Connection Error");
+            }
+        }
+    </script>
+</body>
+
+</html> 

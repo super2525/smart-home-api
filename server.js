@@ -145,6 +145,6 @@ app.get("/api/device/:id/getState", verifyToken, async (req, res) => {
     }
 });
 
-/* -------------------- Start Server -------------------- */
+/* -------------------- Start Server ------------------*/
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, ()=>console.log(`Server running on port ${PORT}`));

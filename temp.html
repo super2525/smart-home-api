@@ -3,90 +3,215 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เพิ่มผู้ใช้งานใหม่</title>
+    <title>ตั้งเวลาเปิด-ปิดไฟ</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #f3f3f3; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        #container { width: 100%; max-width: 350px; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.15); text-align: center; }
-        h2 { margin-top: 0; color: #333; }
-        input { width: 90%; padding: 12px; margin-top: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 16px; }
-        .btn { width: 98%; padding: 12px; margin-top: 20px; border: none; border-radius: 6px; color: white; font-size: 16px; cursor: pointer; transition: 0.3s; }
-        .btn-add { background: #4CAF50; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h2 { text-align: center; margin-top: 0; color: #444; }
+        
+        .control-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        select, input { padding: 12px; border: 1px solid #ddd; border-radius: 8px; flex-grow: 1; font-size: 16px; }
+        
+        button { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; font-size: 16px; transition: 0.2s; }
+        .btn-add { background: #4CAF50; width: 100%; }
         .btn-add:hover { background: #45a049; }
-        .btn-back { background: #888; margin-top: 10px; }
-        .btn-back:hover { background: #666; }
+        .btn-add:disabled { background: #ccc; cursor: not-allowed; }
+
+        .btn-back { background: #607d8b; display: inline-block; text-decoration: none; padding: 8px 15px; border-radius: 5px; color: white; font-size: 14px; margin-bottom: 20px; }
+        .btn-back:hover { background: #546e7a; }
+
+        .list-item { display: flex; justify-content: space-between; align-items: center; background: #fff; border-bottom: 1px solid #eee; padding: 15px 0; }
+        .time-badge { background: #e3f2fd; color: #1565c0; padding: 5px 10px; border-radius: 6px; font-weight: bold; margin-right: 10px; font-size: 1.1em; }
+        .action-on { color: #2e7d32; font-weight: bold; }
+        .action-off { color: #c62828; font-weight: bold; }
+        
+        .meta-info { font-size: 12px; color: #888; margin-top: 5px; }
+        
+        .btn-del { background: #ff5252; padding: 6px 12px; font-size: 13px; margin-left: 10px; border-radius: 6px; }
+        .btn-del:hover { background: #ff1744; }
+        
+        #loading { text-align: center; color: #666; margin-top: 20px; }
     </style>
 </head>
 <body>
 
-    <div id="container">
-        <h2>เพิ่มผู้ใช้งาน</h2>
-        
-        <input type="text" id="newUsername" placeholder="ชื่อผู้ใช้ (Username)">
-        <input type="password" id="newPass1" placeholder="รหัสผ่าน">
-        <input type="password" id="newPass2" placeholder="ยืนยันรหัสผ่าน">
+    <div class="container">
+        <a href="/" class="btn-back">← กลับหน้าควบคุม</a>
+        <h2>⏰ ตั้งเวลาอัตโนมัติ</h2>
 
-        <button class="btn btn-add" onclick="createNewUser()">เพิ่มผู้ใช้</button>
-        <button class="btn btn-back" onclick="window.location.href='/'">กลับหน้าหลัก</button>
+        <!-- ส่วนควบคุม (จะถูกซ่อนถ้าไม่ใช่ Admin) -->
+        <div id="adminPanel">
+            <div class="control-group">
+                <select id="pinSelect"></select>
+                <select id="actionSelect">
+                    <option value="ON">สั่งเปิด (ON)</option>
+                    <option value="OFF">สั่งปิด (OFF)</option>
+                </select>
+                <input type="time" id="timeInput" required>
+            </div>
+            <button id="btnAdd" class="btn-add" onclick="addSchedule()">บันทึกเวลา</button>
+        </div>
+
+        <hr style="margin: 25px 0; border: 0; border-top: 1px solid #eee;">
+        
+        <div id="loading">กำลังโหลดข้อมูล...</div>
+        <div id="scheduleList"></div>
     </div>
 
     <script>
-        // ใช้ Relative Path เพื่อให้ทำงานบน Render ได้
-        const API_URL = "/api"; 
+        // Config: รายชื่อ Pin และ Device ID
+        const pinLabels = [
+            "ครัว 1", "ครัว 2", "ครัว 3", 
+            "ห้องอาร์มมี่", "ห้องเอื้อมเทพ", "ห้องพ่อแม่", 
+            "ไฟระย้า 1", "ไฟระย้า 2", "หลังบ้าน", 
+            "ไฟแสงสี (Alarm)", "ข้างขวา"
+        ];
+        // ระบุ Device ID (ตอนนี้มีตัวเดียว)
+        const currentDeviceID = "esp32-01"; 
 
-        async function createNewUser() {
-            const username = document.getElementById("newUsername").value.trim();
-            const pass1 = document.getElementById("newPass1").value.trim();
-            const pass2 = document.getElementById("newPass2").value.trim();
-            
-            // ดึง Token จาก LocalStorage (ต้อง Login จากหน้าแรกมาก่อน)
-            const token = localStorage.getItem("token");
+        const API_URL = "/api";
+        const token = localStorage.getItem("token");
+        const userRole = localStorage.getItem("role"); // ดึง Role ที่เก็บไว้ตอน Login
 
-            // Validation เบื้องต้น
-            if (!token) {
-                alert("กรุณา Login ที่หน้าหลักก่อนใช้งานหน้านี้");
+        // 1. Init: สร้าง Dropdown
+        const pinSel = document.getElementById("pinSelect");
+        pinLabels.forEach((label, idx) => {
+            let opt = document.createElement("option");
+            opt.value = idx;
+            opt.innerText = label;
+            pinSel.appendChild(opt);
+        });
+
+        // 2. Init: ตรวจสอบ Role
+        window.onload = () => {
+            if(!token) {
+                alert("กรุณา Login ก่อนใช้งาน");
                 window.location.href = "/";
                 return;
             }
-            if (!username || !pass1 || !pass2) {
-                alert("กรุณากรอกข้อมูลให้ครบถ้วน");
-                return;
-            }
-            if (pass1 !== pass2) {
-                alert("รหัสผ่านไม่ตรงกัน");
-                return;
+
+            // ถ้าไม่ใช่ Admin ให้ซ่อนแผงควบคุม
+            if (userRole !== 'admin') {
+                const adminPanel = document.getElementById("adminPanel");
+                if(adminPanel) adminPanel.style.display = "none";
             }
 
+            loadData();
+        };
+
+        // 3. โหลดข้อมูล
+        async function loadData() {
             try {
-                // ส่งข้อมูลไปที่ Server
-                const res = await fetch(`${API_URL}/create-user`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": "Bearer " + token // แนบ Token ไปยืนยันตัวตน
-                    },
-                    body: JSON.stringify({ username: username, password: pass1 })
+                const res = await fetch(`${API_URL}/schedule`, {
+                    headers: { "Authorization": "Bearer " + token }
                 });
+                const list = await res.json();
+                
+                const div = document.getElementById("scheduleList");
+                document.getElementById("loading").style.display = "none";
+                div.innerHTML = "";
 
-                const data = await res.json();
-
-                if (res.ok) {
-                    alert("สำเร็จ: " + data.message);
-                    // ล้างค่าในช่องกรอก
-                    document.getElementById("newUsername").value = "";
-                    document.getElementById("newPass1").value = "";
-                    document.getElementById("newPass2").value = "";
-                } else {
-                    // กรณี Error (เช่น User ซ้ำ, หรือ Token หมดอายุ)
-                    if (res.status === 403) {
-                        alert("ล้มเหลว: คุณไม่ใช่ Admin หรือ Token หมดอายุ");
-                    } else {
-                        alert("ล้มเหลว: " + (data.error || "เกิดข้อผิดพลาด"));
-                    }
+                if(list.length === 0) {
+                    div.innerHTML = "<p style='text-align:center; color:#999;'>ยังไม่มีการตั้งเวลา</p>";
+                    return;
                 }
 
-            } catch (err) {
-                console.error(err);
-                alert("เชื่อมต่อ Server ไม่ได้");
+                list.forEach(item => {
+                    const pinName = pinLabels[item.pinIndex] || `Pin ${item.pinIndex}`;
+                    const actionHtml = item.action === 'ON' 
+                        ? `<span class="action-on">เปิดไฟ</span>` 
+                        : `<span class="action-off">ปิดไฟ</span>`;
+
+                    // แปลง Timestamp (createdAt) เป็นเวลาไทย
+                    let dateStr = "-";
+                    if (item.createdAt) {
+                        dateStr = new Date(item.createdAt).toLocaleString('th-TH', {
+                            day: '2-digit', month: '2-digit', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+                    }
+
+                    // แสดงชื่อคนสร้าง (ถ้ามี)
+                    const creator = item.createdBy ? item.createdBy : "System";
+
+                    // ปุ่มลบ (แสดงเฉพาะ Admin)
+                    let deleteBtn = "";
+                    if (userRole === 'admin') {
+                        deleteBtn = `<button class="btn-del" onclick="delSchedule('${item._id}')">ลบ</button>`;
+                    }
+
+                    div.innerHTML += `
+                        <div class="list-item">
+                            <div>
+                                <span class="time-badge">${item.time} น.</span>
+                                ${actionHtml} : <strong>${pinName}</strong>
+                                <div class="meta-info">
+                                    โดย: ${creator} | บันทึกเมื่อ: ${dateStr}
+                                </div>
+                            </div>
+                            ${deleteBtn}
+                        </div>
+                    `;
+                });
+            } catch(e) {
+                console.error(e);
+                alert("โหลดข้อมูลล้มเหลว");
+            }
+        }
+
+        // 4. เพิ่มเวลา
+        async function addSchedule() {
+            const pinIndex = document.getElementById("pinSelect").value;
+            const action = document.getElementById("actionSelect").value;
+            const time = document.getElementById("timeInput").value;
+
+            if(!time) return alert("กรุณาเลือกเวลา");
+
+            const btn = document.getElementById("btnAdd");
+            btn.disabled = true;
+            btn.innerText = "กำลังบันทึก...";
+
+            try {
+                const res = await fetch(`${API_URL}/schedule`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+                    body: JSON.stringify({ 
+                        deviceID: currentDeviceID, // ส่ง ID อุปกรณ์ไปด้วย
+                        pinIndex: pinIndex, 
+                        action: action, 
+                        time: time 
+                    })
+                });
+                
+                if(res.ok) {
+                    loadData();
+                } else {
+                    alert("บันทึกไม่สำเร็จ (อาจไม่มีสิทธิ์)");
+                }
+            } catch(e) {
+                alert("Connection Error");
+            }
+
+            btn.disabled = false;
+            btn.innerText = "บันทึกเวลา";
+        }
+
+        // 5. ลบเวลา
+        async function delSchedule(id) {
+            if(!confirm("ยืนยันการลบรายการนี้?")) return;
+            
+            try {
+                const res = await fetch(`${API_URL}/schedule/${id}`, {
+                    method: "DELETE",
+                    headers: { "Authorization": "Bearer " + token }
+                });
+                if(res.ok) {
+                    loadData();
+                } else {
+                    alert("ลบไม่สำเร็จ (อาจไม่มีสิทธิ์)");
+                }
+            } catch(e) {
+                alert("Connection Error");
             }
         }
     </script>
